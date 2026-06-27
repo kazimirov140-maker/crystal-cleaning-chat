@@ -40,16 +40,19 @@ export async function POST(req: Request) {
 
     // Call the Google Sheets webhook
     const GOOGLE_SHEETS_WEBHOOK_URL = process.env.GOOGLE_SHEETS_WEBHOOK_URL;
-    if (GOOGLE_SHEETS_WEBHOOK_URL) {
-      await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          date_submitted: new Date().toISOString(),
-          ...object
-        }),
-      });
+    if (!GOOGLE_SHEETS_WEBHOOK_URL) {
+      console.error("CRITICAL ERROR: GOOGLE_SHEETS_WEBHOOK_URL is missing from environment variables!");
+      return new Response(JSON.stringify({ error: "Configuration missing" }), { status: 500 });
     }
+
+    await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        date_submitted: new Date().toISOString(),
+        ...object
+      }),
+    });
 
     return new Response(JSON.stringify({ success: true, lead: object }));
   } catch (error) {
