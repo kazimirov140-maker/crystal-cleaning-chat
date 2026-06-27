@@ -27,12 +27,12 @@ export function Chat() {
     }
     
     // Скрываем блок LEAD_DATA из UI (даже в процессе стриминга)
-    if (text.includes("[LEAD_DATA_START]")) {
-      const startIdx = text.indexOf("[LEAD_DATA_START]");
-      const endIdx = text.indexOf("[LEAD_DATA_END]");
+    if (text.includes("|||")) {
+      const startIdx = text.indexOf("|||");
+      const endIdx = text.indexOf("|||", startIdx + 3);
       
       if (endIdx !== -1) {
-        text = text.substring(0, startIdx) + text.substring(endIdx + 15);
+        text = text.substring(0, startIdx) + text.substring(endIdx + 3);
       } else {
         // Если тег еще не закрыт (в процессе стриминга), скрываем все после открывающего тега
         text = text.substring(0, startIdx);
@@ -63,21 +63,36 @@ export function Chat() {
   useEffect(() => {
     const lastMsg = messages[messages.length - 1];
     if (lastMsg?.role === 'assistant' && lastMsg.content) {
-      const match = lastMsg.content.match(/\[LEAD_DATA_START\]\s*([\s\S]*?)\s*\[LEAD_DATA_END\]/);
+      const match = lastMsg.content.match(/\|\|\|\s*([\s\S]*?)\s*\|\|\|/);
       if (match && match[1]) {
-        const jsonStr = match[1];
-        if (jsonStr !== lastLeadDataRef.current) {
-          lastLeadDataRef.current = jsonStr;
-          try {
-            const parsed = JSON.parse(jsonStr);
-            fetch('/api/save-lead', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(parsed)
-            }).catch(e => console.error("Error saving lead:", e));
-          } catch(e) {
-            console.error("Failed to parse LEAD_DATA", e);
-          }
+        const leadText = match[1];
+        if (leadText !== lastLeadDataRef.current) {
+          lastLeadDataRef.current = leadText;
+          
+          const parsed: any = {};
+          leadText.split('|').forEach(part => {
+             const [key, ...val] = part.split(':');
+             if (key && val.length > 0) {
+                const k = key.trim().toLowerCase();
+                const v = val.join(':').trim();
+                const valStr = v !== 'нет' && v !== '[нет]' ? v : '';
+                if (k.includes('имя')) parsed.name = valStr;
+                if (k.includes('телефон')) parsed.phone = valStr;
+                if (k.includes('email')) parsed.email = valStr;
+                if (k.includes('адрес')) parsed.address = valStr;
+                if (k.includes('тип')) parsed.cleaningType = valStr;
+                if (k.includes('размер')) parsed.propertySize = valStr;
+                if (k.includes('дата')) parsed.date = valStr;
+                if (k.includes('детали')) parsed.comments = valStr;
+                if (k.includes('финал')) parsed.isFinal = (v.toLowerCase() === 'да');
+             }
+          });
+
+          fetch('/api/save-lead', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(parsed)
+          }).catch(e => console.error("Error saving lead:", e));
         }
       }
     }
