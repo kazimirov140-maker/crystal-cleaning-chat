@@ -27,12 +27,12 @@ export function Chat() {
     }
     
     // Скрываем блок LEAD_DATA из UI (даже в процессе стриминга)
-    if (text.includes("<LEAD_DATA>")) {
-      const startIdx = text.indexOf("<LEAD_DATA>");
-      const endIdx = text.indexOf("</LEAD_DATA>");
+    if (text.includes("[LEAD_DATA_START]")) {
+      const startIdx = text.indexOf("[LEAD_DATA_START]");
+      const endIdx = text.indexOf("[LEAD_DATA_END]");
       
       if (endIdx !== -1) {
-        text = text.substring(0, startIdx) + text.substring(endIdx + 12);
+        text = text.substring(0, startIdx) + text.substring(endIdx + 15);
       } else {
         // Если тег еще не закрыт (в процессе стриминга), скрываем все после открывающего тега
         text = text.substring(0, startIdx);
@@ -63,7 +63,7 @@ export function Chat() {
   useEffect(() => {
     const lastMsg = messages[messages.length - 1];
     if (lastMsg?.role === 'assistant' && lastMsg.content) {
-      const match = lastMsg.content.match(/<LEAD_DATA>\s*([\s\S]*?)\s*<\/LEAD_DATA>/);
+      const match = lastMsg.content.match(/\[LEAD_DATA_START\]\s*([\s\S]*?)\s*\[LEAD_DATA_END\]/);
       if (match && match[1]) {
         const jsonStr = match[1];
         if (jsonStr !== lastLeadDataRef.current) {
