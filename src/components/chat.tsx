@@ -61,7 +61,7 @@ export function Chat() {
           </div>
         )}
         
-        {messages.map((m) => (
+        {messages.filter(m => getMessageText(m).trim().length > 0).map((m) => (
           <motion.div
             key={m.id}
             initial={{ opacity: 0, y: 10 }}
@@ -103,7 +103,7 @@ export function Chat() {
                     : "bg-white/80 border border-white/50 text-slate-800 rounded-tl-sm"
                 )}
               >
-                {getMessageText(m) || (getHasToolInvocation(m) && "Отправляю заявку менеджеру...")}
+                {getMessageText(m)}
               </div>
             </div>
           </motion.div>
