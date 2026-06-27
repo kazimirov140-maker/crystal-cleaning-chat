@@ -66,7 +66,7 @@ export async function POST(req: Request) {
     maxSteps: 5,
     tools: {
       submit_lead: tool({
-        description: 'Save the lead info. Call this IMMEDIATELY after the client provides their phone number. Do not wait for all questions to be answered. After calling this, continue asking the remaining questions.',
+        description: 'Save the lead info. Call this IMMEDIATELY after the client provides their phone number. Do not wait for all questions to be answered. After calling this, continue asking the remaining questions. Use the isFinal parameter to indicate if the survey is fully complete.',
         parameters: z.object({
           name: z.string().optional().describe("Client's full name"),
           phone: z.string().describe("Client's phone number or email"),
@@ -75,25 +75,26 @@ export async function POST(req: Request) {
           propertySize: z.string().optional().describe("Size of the property (beds/baths or sq ft)"),
           date: z.string().optional().describe("Desired date for the cleaning"),
           comments: z.string().optional().describe("Any additional comments, pets, or allergies"),
+          isFinal: z.boolean().describe("Set to true ONLY if all 7 questions have been asked and answered, OR if the client refuses to answer any more questions and the survey is permanently finished. Otherwise, false."),
         }),
         // @ts-expect-error - AI SDK type mismatch
-        execute: async ({ name, phone, address, cleaningType, propertySize, date, comments }) => {
-          console.log("LEAD GATHERED:", { name, phone, address, cleaningType, propertySize, date, comments });
+        execute: async ({ name, phone, address, cleaningType, propertySize, date, comments, isFinal }) => {
+          console.log("LEAD GATHERED:", { name, phone, address, cleaningType, propertySize, date, comments, isFinal });
           
           const botToken = process.env.TELEGRAM_BOT_TOKEN;
           const chatId = process.env.TELEGRAM_CHAT_ID;
           const sheetsWebhook = process.env.GOOGLE_SHEETS_WEBHOOK_URL;
 
-          // 1. Отправка в Telegram
-          if (botToken && chatId) {
+          // 1. Отправка в Telegram ТОЛЬКО если анкета завершена (чтобы не спамить менеджера)
+          if (isFinal && botToken && chatId) {
             try {
               const text = `🔔 *Новая заявка на уборку!*\n\n` +
-                `👤 *Имя:* ${name}\n` +
+                `👤 *Имя:* ${name || 'не указано'}\n` +
                 `📞 *Телефон:* ${phone}\n` +
-                `📍 *Адрес/ZIP:* ${address}\n` +
-                `🧹 *Тип уборки:* ${cleaningType}\n` +
-                `📐 *Размер объекта:* ${propertySize}\n` +
-                `📅 *Дата:* ${date}\n` +
+                `📍 *Адрес/ZIP:* ${address || 'не указан'}\n` +
+                `🧹 *Тип уборки:* ${cleaningType || 'не указан'}\n` +
+                `📐 *Размер объекта:* ${propertySize || 'не указан'}\n` +
+                `📅 *Дата:* ${date || 'не указана'}\n` +
                 `💬 *Комментарий:* ${comments || 'нет'}`;
               
               await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
