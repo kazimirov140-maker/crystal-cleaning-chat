@@ -14,11 +14,14 @@ export function Chat() {
   const isLoading = status === 'submitted' || status === 'streaming';
 
   const getMessageText = (msg: any) => {
-    if (!msg.parts) return "";
-    return msg.parts
-      .filter((part: any) => part.type === "text")
-      .map((part: any) => part.text)
-      .join("");
+    let text = msg.content || "";
+    if (!text && msg.parts) {
+      text = msg.parts
+        .filter((part: any) => part.type === "text" || part.type === "text-delta")
+        .map((part: any) => part.text || part.delta || "")
+        .join("");
+    }
+    return text;
   };
 
   const getHasToolInvocation = (msg: any) => {
