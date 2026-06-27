@@ -1,4 +1,4 @@
-import { google } from '@ai-sdk/google';
+import { groq } from '@ai-sdk/groq';
 import { streamText, tool, isStepCount, convertToModelMessages } from 'ai';
 import { z } from 'zod';
 
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
   const modelMessages = await convertToModelMessages(sanitizedMessages);
 
   const result = streamText({
-    model: google('gemini-flash-latest'),
+    model: groq('llama-3.3-70b-versatile'),
     system: systemPrompt,
     messages: modelMessages,
     stopWhen: isStepCount(5),
