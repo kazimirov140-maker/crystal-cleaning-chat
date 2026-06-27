@@ -13,18 +13,30 @@ export function Chat() {
   const [localInput, setLocalInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const getMessageText = (msg: any) => {
+    let text = msg.content || "";
+    if (!text && msg.parts) {
+      text = msg.parts
+        .filter((part: any) => part.type === "text" || part.type === "text-delta")
+        .map((part: any) => part.text || part.delta || "")
+        .join("");
+    }
+    return text.trim();
+  };
+
   useEffect(() => {
     if (messages.length === 0) return;
     if (status === 'streaming' || status === 'submitted') return;
 
-    const userText = messages.filter((m: any) => m.role === 'user').map((m: any) => m.content || "").join(" ");
+    const userText = messages.filter((m: any) => m.role === 'user').map(getMessageText).join(" ");
     const hasPhone = userText.replace(/\D/g, '').length >= 7;
     
     const lastMsg: any = messages[messages.length - 1];
+    const lastMsgText = getMessageText(lastMsg).toLowerCase();
     const isFinal = lastMsg.role === 'assistant' && (
-      lastMsg.content?.toLowerCase().includes('менеджер') || 
-      lastMsg.content?.toLowerCase().includes('свяжется') || 
-      lastMsg.content?.toLowerCase().includes('расчет')
+      lastMsgText.includes('менеджер') || 
+      lastMsgText.includes('свяжется') || 
+      lastMsgText.includes('расчет')
     );
 
     let stage = null;
@@ -47,17 +59,6 @@ export function Chat() {
   const isLoading = status === 'submitted' || status === 'streaming';
 
   const lastLeadDataRef = useRef<string>("");
-
-  const getMessageText = (msg: any) => {
-    let text = msg.content || "";
-    if (!text && msg.parts) {
-      text = msg.parts
-        .filter((part: any) => part.type === "text" || part.type === "text-delta")
-        .map((part: any) => part.text || part.delta || "")
-        .join("");
-    }
-    return text.trim();
-  };
 
   const getHasToolInvocation = (msg: any) => {
     if (!msg.parts) return false;

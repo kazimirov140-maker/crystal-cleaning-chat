@@ -22,7 +22,13 @@ export async function POST(req: Request) {
   "isFinal": true (если опрос завершен) или false
 }
 НИКАКОГО дополнительного текста до или после JSON.`,
-      prompt: `История чата:\n${JSON.stringify(messages.map((m:any) => m.role + ": " + m.content).join("\n"))}`
+      prompt: `История чата:\n${JSON.stringify(messages.map((m:any) => {
+        let text = m.content || "";
+        if (!text && m.parts) {
+          text = m.parts.map((p:any) => p.text || "").join("");
+        }
+        return m.role + ": " + text;
+      }).join("\n"))}`
     });
 
     let object;
