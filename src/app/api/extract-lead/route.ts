@@ -7,7 +7,7 @@ export async function POST(req: Request) {
 
     // Extract data from the conversation history using Groq
     const { text } = await generateText({
-      model: groq('llama-3.3-70b-versatile'),
+      model: groq('llama-3.1-8b-instant'),
       system: `Ты - анализатор данных. Твоя задача - извлечь информацию о клиенте из истории чата и вернуть СТРОГО в формате JSON.
 Формат JSON:
 {
