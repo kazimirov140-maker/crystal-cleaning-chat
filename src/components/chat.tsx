@@ -7,7 +7,9 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 export function Chat() {
-  const { messages, sendMessage, status } = useChat();
+  const { messages, sendMessage, status } = useChat({
+    maxSteps: 5
+  });
   const [localInput, setLocalInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   

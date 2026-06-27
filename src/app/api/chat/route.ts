@@ -1,5 +1,5 @@
 import { groq } from '@ai-sdk/groq';
-import { streamText, tool, isStepCount, convertToModelMessages } from 'ai';
+import { streamText, tool, convertToModelMessages } from 'ai';
 import { z } from 'zod';
 
 // Разрешаем выполнение до 30 секунд
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
     model: groq('llama-3.3-70b-versatile'),
     system: systemPrompt,
     messages: modelMessages,
-    stopWhen: isStepCount(5),
+    maxSteps: 5,
     tools: {
       submit_lead: tool({
         description: 'Save the lead info. Call this IMMEDIATELY after the client provides their phone number. Do not wait for all questions to be answered. After calling this, continue asking the remaining questions. Use the isFinal parameter to indicate if the survey is fully complete.',
