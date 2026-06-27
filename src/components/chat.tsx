@@ -15,6 +15,8 @@ export function Chat() {
   
   const isLoading = status === 'submitted' || status === 'streaming';
 
+  const lastLeadDataRef = useRef<string>("");
+
   const getMessageText = (msg: any) => {
     let text = msg.content || "";
     if (!text && msg.parts) {
@@ -23,7 +25,20 @@ export function Chat() {
         .map((part: any) => part.text || part.delta || "")
         .join("");
     }
-    return text;
+    
+    // Скрываем блок LEAD_DATA из UI (даже в процессе стриминга)
+    if (text.includes("<LEAD_DATA>")) {
+      const startIdx = text.indexOf("<LEAD_DATA>");
+      const endIdx = text.indexOf("</LEAD_DATA>");
+      
+      if (endIdx !== -1) {
+        text = text.substring(0, startIdx) + text.substring(endIdx + 12);
+      } else {
+        // Если тег еще не закрыт (в процессе стриминга), скрываем все после открывающего тега
+        text = text.substring(0, startIdx);
+      }
+    }
+    return text.trim();
   };
 
   const getHasToolInvocation = (msg: any) => {
@@ -44,7 +59,28 @@ export function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Перехват LEAD_DATA и фоновая отправка
   useEffect(() => {
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg?.role === 'assistant' && lastMsg.content) {
+      const match = lastMsg.content.match(/<LEAD_DATA>\s*([\s\S]*?)\s*<\/LEAD_DATA>/);
+      if (match && match[1]) {
+        const jsonStr = match[1];
+        if (jsonStr !== lastLeadDataRef.current) {
+          lastLeadDataRef.current = jsonStr;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            fetch('/api/save-lead', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(parsed)
+            }).catch(e => console.error("Error saving lead:", e));
+          } catch(e) {
+            console.error("Failed to parse LEAD_DATA", e);
+          }
+        }
+      }
+    }
     scrollToBottom();
   }, [messages]);
 
