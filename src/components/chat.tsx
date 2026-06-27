@@ -17,10 +17,10 @@ export function Chat() {
     if (messages.length === 0) return;
     if (status === 'streaming' || status === 'submitted') return;
 
-    const userText = messages.filter(m => m.role === 'user').map(m => m.content).join(" ");
+    const userText = messages.filter((m: any) => m.role === 'user').map((m: any) => m.content).join(" ");
     const hasPhone = /\d{7,}/.test(userText);
     
-    const lastMsg = messages[messages.length - 1];
+    const lastMsg: any = messages[messages.length - 1];
     const isFinal = lastMsg.role === 'assistant' && (
       lastMsg.content.toLowerCase().includes('менеджер') || 
       lastMsg.content.toLowerCase().includes('свяжется') || 
