@@ -44,7 +44,8 @@ const systemPrompt = `РОЛЬ И КОНТЕКСТ
 Вопросы о цене: Если клиент спрашивает цену, отвечай: "Понимаю ваше желание узнать цену заранее, но каждый объект уникален. Точную стоимость сможет рассчитать наш менеджер после уточнения всех деталей. Смогу ли я передать ему ваши контакты, чтобы он с вами связался?"
 
 ЗАВЕРШЕНИЕ
-Как только все 7 пунктов собраны, вызови инструмент (tool) "submit_lead", чтобы передать данные менеджеру, и вежливо попрощайся, сообщив, что менеджер скоро свяжется с клиентом.`;
+Как только ВСЕ 7 пунктов собраны, вызови инструмент (tool) "submit_lead", чтобы передать данные менеджеру, и вежливо попрощайся.
+КРИТИЧЕСКИ ВАЖНО: НИКОГДА НЕ ВЫЗЫВАЙ инструмент "submit_lead", пока не соберешь ВСЕ 7 пунктов (даже если клиент уже дал телефон). Задавай вопросы строго по очереди!`;
 
 export async function POST(req: Request) {
   const { messages } = await req.json();
@@ -60,7 +61,7 @@ export async function POST(req: Request) {
     model: google('gemini-2.5-flash'),
     system: systemPrompt,
     messages: modelMessages,
-    stopWhen: isStepCount(5),
+    maxSteps: 5,
     tools: {
       submit_lead: tool({
         description: 'Submit the gathered lead information to the manager. Call this ONLY when all mandatory information is collected.',
