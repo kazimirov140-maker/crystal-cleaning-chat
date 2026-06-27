@@ -69,18 +69,23 @@ export async function POST(req: Request) {
       submit_lead: tool({
         description: 'Save the lead info. Call this IMMEDIATELY after the client provides their phone number. Do not wait for all questions to be answered. After calling this, continue asking the remaining questions. Use the isFinal parameter to indicate if the survey is fully complete.',
         parameters: z.object({
-          name: z.string().optional().describe("Client's full name"),
-          phone: z.string().describe("Client's phone number or email"),
-          address: z.string().optional().describe("Client's ZIP code or full address"),
-          cleaningType: z.string().optional().describe("Type of cleaning requested"),
-          propertySize: z.string().optional().describe("Size of the property (beds/baths or sq ft)"),
-          date: z.string().optional().describe("Desired date for the cleaning"),
-          comments: z.string().optional().describe("Any additional comments, pets, or allergies"),
-          isFinal: z.boolean().describe("Set to true ONLY if all 7 questions have been asked and answered, OR if the client refuses to answer any more questions and the survey is permanently finished. Otherwise, false."),
+          name: z.string().describe("Client's full name. Use empty string '' if unknown."),
+          phone: z.string().describe("Client's phone number. Use empty string '' if unknown."),
+          email: z.string().describe("Client's email. Use empty string '' if unknown."),
+          address: z.string().describe("Client's ZIP code or full address. Use empty string '' if unknown."),
+          city: z.string().describe("Client's city. Use empty string '' if unknown."),
+          zipCode: z.string().describe("Client's zip code. Use empty string '' if unknown."),
+          cleaningType: z.string().describe("Type of cleaning requested. Use empty string '' if unknown."),
+          propertySize: z.string().describe("Size of the property. Use empty string '' if unknown."),
+          date: z.string().describe("Desired date. Use empty string '' if unknown."),
+          comments: z.string().describe("Comments, pets, allergies. Use empty string '' if unknown."),
+          isFinal: z.boolean().describe("Set to true ONLY if all questions have been asked and answered"),
         }),
         // @ts-expect-error - AI SDK type mismatch
-        execute: async ({ name, phone, address, cleaningType, propertySize, date, comments, isFinal }) => {
-          console.log("LEAD GATHERED:", { name, phone, address, cleaningType, propertySize, date, comments, isFinal });
+        execute: async ({ name, phone, email, address, city, zipCode, cleaningType, propertySize, date, comments, isFinal }) => {
+          const finalAddress = address || city || zipCode || 'не указан';
+          const finalPhone = phone || email || 'не указан';
+          console.log("LEAD GATHERED:", { name, finalPhone, finalAddress, cleaningType, propertySize, date, comments, isFinal });
           
           const botToken = process.env.TELEGRAM_BOT_TOKEN;
           const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -91,8 +96,8 @@ export async function POST(req: Request) {
             try {
               const text = `🔔 *Новая заявка на уборку!*\n\n` +
                 `👤 *Имя:* ${name || 'не указано'}\n` +
-                `📞 *Телефон:* ${phone}\n` +
-                `📍 *Адрес/ZIP:* ${address || 'не указан'}\n` +
+                `📞 *Телефон:* ${finalPhone}\n` +
+                `📍 *Адрес/ZIP:* ${finalAddress}\n` +
                 `🧹 *Тип уборки:* ${cleaningType || 'не указан'}\n` +
                 `📐 *Размер объекта:* ${propertySize || 'не указан'}\n` +
                 `📅 *Дата:* ${date || 'не указана'}\n` +
@@ -122,8 +127,8 @@ export async function POST(req: Request) {
                 body: JSON.stringify({
                   date_submitted: new Date().toLocaleString("ru-RU", { timeZone: "America/Chicago" }),
                   name: name || '',
-                  phone: phone || '',
-                  address: address || '',
+                  phone: finalPhone || '',
+                  address: finalAddress || '',
                   cleaningType: cleaningType || '',
                   propertySize: propertySize || '',
                   date: date || '',
