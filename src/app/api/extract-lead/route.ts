@@ -55,8 +55,11 @@ export async function POST(req: Request) {
     });
 
     return new Response(JSON.stringify({ success: true, lead: object }));
-  } catch (error) {
+  } catch (error: any) {
     console.error("Extract Lead Error:", error);
-    return new Response(JSON.stringify({ error: "Failed to extract lead" }), { status: 500 });
+    return new Response(JSON.stringify({ 
+      error: "Failed to extract lead", 
+      details: error?.message || error?.toString() || "Unknown error"
+    }), { status: 500 });
   }
 }
