@@ -18,7 +18,7 @@ export function Chat() {
     if (status === 'streaming' || status === 'submitted') return;
 
     const userText = messages.filter((m: any) => m.role === 'user').map((m: any) => m.content || "").join(" ");
-    const hasPhone = /\d{7,}/.test(userText);
+    const hasPhone = userText.replace(/\D/g, '').length >= 7;
     
     const lastMsg: any = messages[messages.length - 1];
     const isFinal = lastMsg.role === 'assistant' && (
