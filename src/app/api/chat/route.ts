@@ -43,9 +43,11 @@ const systemPrompt = `РОЛЬ И КОНТЕКСТ
 Отказ давать телефон: Если клиент категорически отказывается давать номер телефона до озвучивания цены, предложи оставить Email, либо позвонить напрямую по номеру 417-470-2314.
 Вопросы о цене: Если клиент спрашивает цену, отвечай: "Понимаю ваше желание узнать цену заранее, но каждый объект уникален. Точную стоимость сможет рассчитать наш менеджер после уточнения всех деталей. Смогу ли я передать ему ваши контакты, чтобы он с вами связался?"
 
-ЗАВЕРШЕНИЕ
-Как только ВСЕ 7 пунктов собраны, вызови инструмент (tool) "submit_lead", чтобы передать данные менеджеру, и вежливо попрощайся.
-КРИТИЧЕСКИ ВАЖНО: НИКОГДА НЕ ВЫЗЫВАЙ инструмент "submit_lead", пока не соберешь ВСЕ 7 пунктов (даже если клиент уже дал телефон). Задавай вопросы строго по очереди!`;
+ПРАВИЛО СОХРАНЕНИЯ ЛИДА (КРИТИЧЕСКИ ВАЖНО):
+1. Как только клиент написал свой НОМЕР ТЕЛЕФОНА (или email), ты должна НЕМЕДЛЕННО вызвать инструмент "submit_lead", чтобы контакты не потерялись, если клиент вдруг закроет сайт.
+2. Передай в инструмент все данные, которые уже известны. Остальные поля оставь пустыми.
+3. ПОСЛЕ вызова инструмента НЕ ПРОЩАЙСЯ! Скажи: "Спасибо, я предварительно сохранила ваши контакты. Давайте уточним еще пару деталей..." и ОБЯЗАТЕЛЬНО задай следующий вопрос по списку.
+4. Если клиент отказывается отвечать на какие-то вопросы, просто пропусти их и спроси следующее, либо заверши диалог, если вопросов не осталось.`;
 
 export async function POST(req: Request) {
   const { messages } = await req.json();
@@ -64,14 +66,14 @@ export async function POST(req: Request) {
     maxSteps: 5,
     tools: {
       submit_lead: tool({
-        description: 'Submit the gathered lead information to the manager. Call this ONLY when all mandatory information is collected.',
+        description: 'Save the lead info. Call this IMMEDIATELY after the client provides their phone number. Do not wait for all questions to be answered. After calling this, continue asking the remaining questions.',
         parameters: z.object({
-          name: z.string().describe("Client's full name"),
-          phone: z.string().describe("Client's phone number"),
-          address: z.string().describe("Client's ZIP code or full address"),
-          cleaningType: z.string().describe("Type of cleaning requested"),
-          propertySize: z.string().describe("Size of the property (beds/baths or sq ft)"),
-          date: z.string().describe("Desired date for the cleaning"),
+          name: z.string().optional().describe("Client's full name"),
+          phone: z.string().describe("Client's phone number or email"),
+          address: z.string().optional().describe("Client's ZIP code or full address"),
+          cleaningType: z.string().optional().describe("Type of cleaning requested"),
+          propertySize: z.string().optional().describe("Size of the property (beds/baths or sq ft)"),
+          date: z.string().optional().describe("Desired date for the cleaning"),
           comments: z.string().optional().describe("Any additional comments, pets, or allergies"),
         }),
         // @ts-expect-error - AI SDK type mismatch
