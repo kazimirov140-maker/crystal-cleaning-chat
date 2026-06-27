@@ -1,27 +1,38 @@
 import { groq } from '@ai-sdk/groq';
-import { generateObject } from 'ai';
-import { z } from 'zod';
+import { generateText } from 'ai';
 
 export async function POST(req: Request) {
   try {
     const { messages } = await req.json();
 
     // Extract data from the conversation history using Groq
-    const { object } = await generateObject({
+    const { text } = await generateText({
       model: groq('llama-3.3-70b-versatile'),
-      schema: z.object({
-        name: z.string().default(""),
-        phone: z.string().default(""),
-        email: z.string().default(""),
-        address: z.string().default(""),
-        cleaningType: z.string().default(""),
-        propertySize: z.string().default(""),
-        date: z.string().default(""),
-        comments: z.string().default(""),
-        isFinal: z.boolean().default(false)
-      }),
-      prompt: `Проанализируй историю чата клининговой компании с клиентом и извлеки все данные, которые уже известны. Если чего-то нет, оставь пустую строку.\n\nИстория чата:\n${JSON.stringify(messages.map((m:any) => m.role + ": " + m.content).join("\n"))}`
+      system: `Ты - анализатор данных. Твоя задача - извлечь информацию о клиенте из истории чата и вернуть СТРОГО в формате JSON.
+Формат JSON:
+{
+  "name": "Имя или пустая строка",
+  "phone": "Телефон или пустая строка",
+  "email": "Email или пустая строка",
+  "address": "Адрес или пустая строка",
+  "cleaningType": "Тип уборки или пустая строка",
+  "propertySize": "Размер или пустая строка",
+  "date": "Дата или пустая строка",
+  "comments": "Детали или пустая строка",
+  "isFinal": true (если опрос завершен) или false
+}
+НИКАКОГО дополнительного текста до или после JSON.`,
+      prompt: `История чата:\n${JSON.stringify(messages.map((m:any) => m.role + ": " + m.content).join("\n"))}`
     });
+
+    let object;
+    try {
+      const match = text.match(/\{[\s\S]*\}/);
+      object = JSON.parse(match ? match[0] : text);
+    } catch (e) {
+      console.error("Failed to parse JSON", text);
+      return new Response(JSON.stringify({ error: "Failed to parse JSON" }), { status: 500 });
+    }
 
     if (!object.phone) {
       return new Response(JSON.stringify({ success: false, reason: "No phone number found yet" }));
