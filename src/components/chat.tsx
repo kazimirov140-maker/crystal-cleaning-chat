@@ -7,7 +7,33 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 export function Chat() {
-  const { messages, sendMessage, status } = useChat({});
+  const extractedStagesRef = useRef(new Set<string>());
+
+  const { messages, sendMessage, status } = useChat({
+    onFinish: (event: any) => {
+      const msg = event.message || event;
+      const allMessages = event.messages || [...messages, msg];
+      const userText = allMessages.filter((m: any) => m.role === 'user').map((m: any) => m.content).join(" ");
+      const hasPhone = /\d{7,}/.test(userText);
+      const isFinal = msg.content?.toLowerCase().includes('менеджер') || msg.content?.toLowerCase().includes('свяжется') || msg.content?.toLowerCase().includes('расчет');
+
+      let stage = null;
+      if (isFinal) {
+        stage = 'FINAL';
+      } else if (hasPhone) {
+        stage = 'PHONE';
+      }
+
+      if (stage && !extractedStagesRef.current.has(stage)) {
+        extractedStagesRef.current.add(stage);
+        fetch('/api/extract-lead', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ messages: allMessages })
+        }).catch(e => console.error("Extract error:", e));
+      }
+    }
+  });
   const [localInput, setLocalInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
@@ -22,19 +48,6 @@ export function Chat() {
         .filter((part: any) => part.type === "text" || part.type === "text-delta")
         .map((part: any) => part.text || part.delta || "")
         .join("");
-    }
-    
-    // Скрываем блок LEAD_DATA из UI (даже в процессе стриминга)
-    if (text.includes("|||")) {
-      const startIdx = text.indexOf("|||");
-      const endIdx = text.indexOf("|||", startIdx + 3);
-      
-      if (endIdx !== -1) {
-        text = text.substring(0, startIdx) + text.substring(endIdx + 3);
-      } else {
-        // Если тег еще не закрыт (в процессе стриминга), скрываем все после открывающего тега
-        text = text.substring(0, startIdx);
-      }
     }
     return text.trim();
   };
@@ -57,43 +70,8 @@ export function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Перехват LEAD_DATA и фоновая отправка
+  // Прокрутка при новых сообщениях
   useEffect(() => {
-    const lastMsg = messages[messages.length - 1];
-    if (lastMsg?.role === 'assistant' && lastMsg.content) {
-      const match = lastMsg.content.match(/\|\|\|\s*([\s\S]*?)\s*\|\|\|/);
-      if (match && match[1]) {
-        const leadText = match[1];
-        if (leadText !== lastLeadDataRef.current) {
-          lastLeadDataRef.current = leadText;
-          
-          const parsed: any = {};
-          leadText.split('|').forEach(part => {
-             const [key, ...val] = part.split(':');
-             if (key && val.length > 0) {
-                const k = key.trim().toLowerCase();
-                const v = val.join(':').trim();
-                const valStr = v !== 'нет' && v !== '[нет]' ? v : '';
-                if (k.includes('имя')) parsed.name = valStr;
-                if (k.includes('телефон')) parsed.phone = valStr;
-                if (k.includes('email')) parsed.email = valStr;
-                if (k.includes('адрес')) parsed.address = valStr;
-                if (k.includes('тип')) parsed.cleaningType = valStr;
-                if (k.includes('размер')) parsed.propertySize = valStr;
-                if (k.includes('дата')) parsed.date = valStr;
-                if (k.includes('детали')) parsed.comments = valStr;
-                if (k.includes('финал')) parsed.isFinal = (v.toLowerCase() === 'да');
-             }
-          });
-
-          fetch('/api/save-lead', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(parsed)
-          }).catch(e => console.error("Error saving lead:", e));
-        }
-      }
-    }
     scrollToBottom();
   }, [messages]);
 
